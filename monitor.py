@@ -270,7 +270,7 @@ async def process_signature(session: aiohttp.ClientSession, sig: str):
         log(f"🚀 TOKEN LAUNCH DETECTED! Type: {info['type']}", "green")
         log(f"   Mint: {mint}", "green")
         if mint != "UNKNOWN":
-            buy_url = f"https://trade.padre.gg/{mint}"
+            buy_url = f"https://trade.padre.gg/trade/solana/{mint}?rk=novakk"
             log(f"   Buy on Padre.gg: {buy_url}", "green")
             log(f"   Solscan: https://solscan.io/token/{mint}", "green")
             webbrowser.open(buy_url)  # Auto-open buy page
@@ -628,7 +628,7 @@ function showLaunchAlert(mint) {
   const banner = document.getElementById('alertBanner');
   banner.classList.add('active');
   document.getElementById('alertMint').textContent = mint;
-  document.getElementById('buyBtn').href = 'https://trade.padre.gg/' + mint;
+  document.getElementById('buyBtn').href = 'https://trade.padre.gg/trade/solana/' + mint;
   document.getElementById('alertLinks').innerHTML =
     '<a href="https://solscan.io/token/' + mint + '" target="_blank">Solscan</a>' +
     '<a href="https://birdeye.so/token/' + mint + '?chain=solana" target="_blank">Birdeye</a>' +
@@ -653,7 +653,7 @@ function addEvent(ev) {
   let linksHtml = '';
   if (isLaunch && mint) {
     linksHtml = '<div class="event-links">' +
-      '<a href="https://trade.padre.gg/' + mint + '" target="_blank">[Padre]</a> ' +
+      '<a href="https://trade.padre.gg/trade/solana/' + mint + '" target="_blank">[Padre]</a> ' +
       '<a href="https://solscan.io/token/' + mint + '" target="_blank">[Solscan]</a>' +
       '</div>';
   } else if (ev.signature) {

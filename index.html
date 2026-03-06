@@ -210,7 +210,7 @@ function showLaunchAlert(mint) {
   const banner = document.getElementById('alertBanner');
   banner.classList.add('active');
   document.getElementById('alertMint').textContent = mint;
-  document.getElementById('buyBtn').href = 'https://trade.padre.gg/' + mint;
+  document.getElementById('buyBtn').href = 'https://trade.padre.gg/trade/solana/' + mint + '?rk=novakk;
   document.getElementById('alertLinks').innerHTML =
     '<a href="https://solscan.io/token/' + mint + '" target="_blank">Solscan</a>' +
     '<a href="https://birdeye.so/token/' + mint + '?chain=solana" target="_blank">Birdeye</a>' +
@@ -231,7 +231,7 @@ function addEvent(sig, isLaunch, type, mint) {
   let linksHtml = '';
   if (isLaunch && mint) {
     linksHtml = '<div class="event-links">' +
-      '<a href="https://trade.padre.gg/' + mint + '" target="_blank">[Padre]</a> ' +
+      '<a href="https://trade.padre.gg/trade/solana/' + mint + '?rk=novakk + '" target="_blank">[Padre]</a> ' +
       '<a href="https://solscan.io/token/' + mint + '" target="_blank">[Solscan]</a>' +
       '</div>';
   } else if (sig) {
@@ -263,7 +263,7 @@ function addEvent(sig, isLaunch, type, mint) {
 
     // Auto-open Padre.gg buy page
     if (mint) {
-      window.open('https://trade.padre.gg/' + mint, '_blank');
+      window.open('https://trade.padre.gg/trade/solana/' + mint + '?rk=novakk, '_blank');
     }
 
     if ('Notification' in window && Notification.permission === 'granted') {
