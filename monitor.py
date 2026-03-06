@@ -10,6 +10,7 @@ import asyncio
 import json
 import time
 import sys
+import webbrowser
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -21,8 +22,9 @@ import uvicorn
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 TARGET_WALLET = "FML7JiQijDKfSSXMgmKyN2E5y3Exv7vbXSc6QCh3jWJu"
-SOLANA_RPC = "https://api.mainnet-beta.solana.com"
-SOLANA_WS = "wss://api.mainnet-beta.solana.com"
+HELIUS_KEY = "4a00508b-5fa5-49b1-8fb7-c988a7b16917"
+SOLANA_RPC = f"https://mainnet.helius-rpc.com/?api-key={HELIUS_KEY}"
+SOLANA_WS = f"wss://mainnet.helius-rpc.com/?api-key={HELIUS_KEY}"
 WEB_PORT = 8080
 POLL_INTERVAL = 5  # seconds
 
@@ -268,8 +270,10 @@ async def process_signature(session: aiohttp.ClientSession, sig: str):
         log(f"🚀 TOKEN LAUNCH DETECTED! Type: {info['type']}", "green")
         log(f"   Mint: {mint}", "green")
         if mint != "UNKNOWN":
-            log(f"   Buy on Padre.gg: https://trade.padre.gg/{mint}", "green")
+            buy_url = f"https://trade.padre.gg/{mint}"
+            log(f"   Buy on Padre.gg: {buy_url}", "green")
             log(f"   Solscan: https://solscan.io/token/{mint}", "green")
+            webbrowser.open(buy_url)  # Auto-open buy page
         print("\a")  # System bell
     else:
         log(f"Transaction: {sig[:24]}... (programs: {', '.join(p[:8] for p in info['programs'][:3])})", "yellow")
@@ -788,4 +792,7 @@ if __name__ == "__main__":
     print("║        BIAO SNIPER — Token Launch Detector   ║")
     print("╚══════════════════════════════════════════════╝")
     print(f"\033[0m")
+    # Auto-open dashboard in browser after a short delay
+    import threading
+    threading.Timer(1.5, lambda: webbrowser.open(f"http://localhost:{WEB_PORT}")).start()
     uvicorn.run(app, host="0.0.0.0", port=WEB_PORT, log_level="warning")
