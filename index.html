@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BIAO Sniper</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0f;
+    color: #e0e0e0;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    min-height: 100vh;
+  }
+  .header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border-bottom: 2px solid #00ff88;
+    padding: 20px 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header h1 { font-size: 24px; color: #00ff88; text-shadow: 0 0 20px rgba(0,255,136,0.3); }
+  .header .wallet { font-size: 12px; color: #888; margin-top: 4px; word-break: break-all; }
+  .status-badge {
+    padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: bold; flex-shrink: 0;
+  }
+  .status-connected { background: #00ff8833; color: #00ff88; border: 1px solid #00ff88; }
+  .status-disconnected { background: #ff444433; color: #ff4444; border: 1px solid #ff4444; }
+  .status-connecting { background: #ffaa0033; color: #ffaa00; border: 1px solid #ffaa00; }
+
+  .main { padding: 20px 30px; max-width: 1200px; margin: 0 auto; }
+
+  .alert-banner {
+    display: none;
+    background: linear-gradient(135deg, #00ff8822, #00cc6622);
+    border: 2px solid #00ff88;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    text-align: center;
+    animation: pulse 1s ease-in-out infinite alternate;
+  }
+  .alert-banner.active { display: block; }
+  @keyframes pulse {
+    from { box-shadow: 0 0 20px rgba(0,255,136,0.2); }
+    to { box-shadow: 0 0 40px rgba(0,255,136,0.5); }
+  }
+  .alert-banner h2 { color: #00ff88; font-size: 28px; margin-bottom: 12px; }
+  .alert-banner .mint { color: #fff; font-size: 14px; margin-bottom: 16px; word-break: break-all; }
+  .buy-btn {
+    display: inline-block; background: linear-gradient(135deg, #00ff88, #00cc66);
+    color: #000; font-size: 22px; font-weight: bold; padding: 16px 48px;
+    border-radius: 12px; text-decoration: none; margin: 8px;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 0 30px rgba(0,255,136,0.3);
+  }
+  .buy-btn:hover { transform: scale(1.05); box-shadow: 0 0 50px rgba(0,255,136,0.5); }
+  .secondary-links { margin-top: 12px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .secondary-links a {
+    color: #aaa; text-decoration: none; padding: 6px 14px;
+    border: 1px solid #333; border-radius: 8px; font-size: 12px; transition: all 0.15s;
+  }
+  .secondary-links a:hover { color: #fff; border-color: #666; }
+
+  .stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px; margin-bottom: 24px;
+  }
+  .stat-card { background: #12121a; border: 1px solid #222; border-radius: 10px; padding: 16px; }
+  .stat-card .label { color: #666; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+  .stat-card .value { color: #fff; font-size: 22px; margin-top: 4px; }
+
+  .events-section h3 {
+    color: #888; font-size: 14px; text-transform: uppercase;
+    letter-spacing: 1px; margin-bottom: 12px;
+  }
+  .event-card {
+    background: #12121a; border: 1px solid #222; border-radius: 8px;
+    padding: 14px 18px; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 14px;
+    animation: fadeIn 0.3s ease;
+  }
+  .event-card:hover { border-color: #444; }
+  .event-card.launch { border-color: #00ff88; background: linear-gradient(135deg, #00ff8808, #12121a); }
+  .event-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .event-dot.launch { background: #00ff88; box-shadow: 0 0 8px #00ff88; }
+  .event-dot.tx { background: #555; }
+  .event-info { flex: 1; min-width: 0; }
+  .event-type { font-size: 13px; font-weight: bold; }
+  .event-sig { font-size: 11px; color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .event-time { font-size: 11px; color: #444; flex-shrink: 0; }
+  .event-card.launch .event-type { color: #00ff88; }
+  .event-links { display: flex; gap: 6px; flex-shrink: 0; }
+  .event-links a { color: #666; font-size: 11px; text-decoration: none; }
+  .event-links a:hover { color: #00ff88; }
+  .empty-state { text-align: center; padding: 60px 20px; color: #444; }
+  .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+  .empty-state p { font-size: 14px; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>BIAO SNIPER</h1>
+    <div class="wallet">Watching: FML7JiQijDKfSSXMgmKyN2E5y3Exv7vbXSc6QCh3jWJu</div>
+  </div>
+  <div id="statusBadge" class="status-badge status-connecting">Connecting...</div>
+</div>
+
+<div class="main">
+  <div id="alertBanner" class="alert-banner">
+    <h2>TOKEN LAUNCH DETECTED</h2>
+    <div class="mint" id="alertMint"></div>
+    <a id="buyBtn" class="buy-btn" href="#" target="_blank">BUY ON PADRE.GG</a>
+    <div class="secondary-links" id="alertLinks"></div>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card">
+      <div class="label">Transactions Seen</div>
+      <div class="value" id="txCount">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Token Launches</div>
+      <div class="value" id="launchCount">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Monitoring Since</div>
+      <div class="value" id="startTime">-</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Last Activity</div>
+      <div class="value" id="lastActivity">-</div>
+    </div>
+  </div>
+
+  <div class="events-section">
+    <h3>Live Activity Feed</h3>
+    <div id="eventsList">
+      <div class="empty-state">
+        <div class="icon">📡</div>
+        <p>Waiting for transactions from target wallet...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Config ──────────────────────────────────────────────────────────
+const TARGET_WALLET = "FML7JiQijDKfSSXMgmKyN2E5y3Exv7vbXSc6QCh3jWJu";
+const SOLANA_WS = "wss://api.mainnet-beta.solana.com";
+const SOLANA_RPC = "https://api.mainnet-beta.solana.com";
+const POLL_INTERVAL = 5000;
+
+const PUMP_FUN = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P";
+const SPL_TOKEN = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+const TOKEN_2022 = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
+const RAYDIUM_V4 = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8";
+const RAYDIUM_CPMM = "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C";
+
+const TOKEN_PROGRAMS = new Set([SPL_TOKEN, TOKEN_2022]);
+const LAUNCH_PROGRAMS = new Set([PUMP_FUN, RAYDIUM_V4, RAYDIUM_CPMM]);
+
+// ── State ───────────────────────────────────────────────────────────
+let txCount = 0;
+let launchCount = 0;
+let seenSigs = new Set();
+let ws = null;
+let pollTimer = null;
+
+document.getElementById('startTime').textContent = new Date().toLocaleTimeString();
+
+// Request notification permission
+if ('Notification' in window && Notification.permission === 'default') {
+  Notification.requestPermission();
+}
+
+// ── Audio Alert ─────────────────────────────────────────────────────
+function playAlertSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.2, 0.4].forEach(delay => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 1200;
+      osc.type = 'square';
+      gain.gain.value = 0.3;
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + 0.15);
+    });
+  } catch(e) {}
+}
+
+// ── UI Updates ──────────────────────────────────────────────────────
+function updateStatus(status) {
+  const badge = document.getElementById('statusBadge');
+  badge.className = 'status-badge status-' + status;
+  badge.textContent = status === 'connected' ? 'Connected' :
+                      status === 'disconnected' ? 'Disconnected' : 'Connecting...';
+}
+
+function showLaunchAlert(mint) {
+  if (!mint) return;
+  const banner = document.getElementById('alertBanner');
+  banner.classList.add('active');
+  document.getElementById('alertMint').textContent = mint;
+  document.getElementById('buyBtn').href = 'https://trade.padre.gg/' + mint;
+  document.getElementById('alertLinks').innerHTML =
+    '<a href="https://solscan.io/token/' + mint + '" target="_blank">Solscan</a>' +
+    '<a href="https://birdeye.so/token/' + mint + '?chain=solana" target="_blank">Birdeye</a>' +
+    '<a href="https://pump.fun/' + mint + '" target="_blank">Pump.fun</a>' +
+    '<a href="https://jup.ag/swap/SOL-' + mint + '" target="_blank">Jupiter</a>';
+}
+
+function addEvent(sig, isLaunch, type, mint) {
+  const list = document.getElementById('eventsList');
+  const empty = list.querySelector('.empty-state');
+  if (empty) empty.remove();
+
+  const card = document.createElement('div');
+  card.className = 'event-card' + (isLaunch ? ' launch' : '');
+  const time = new Date().toLocaleTimeString();
+  const sigShort = sig ? sig.substring(0, 32) + '...' : '';
+
+  let linksHtml = '';
+  if (isLaunch && mint) {
+    linksHtml = '<div class="event-links">' +
+      '<a href="https://trade.padre.gg/' + mint + '" target="_blank">[Padre]</a> ' +
+      '<a href="https://solscan.io/token/' + mint + '" target="_blank">[Solscan]</a>' +
+      '</div>';
+  } else if (sig) {
+    linksHtml = '<div class="event-links">' +
+      '<a href="https://solscan.io/tx/' + sig + '" target="_blank">[tx]</a>' +
+      '</div>';
+  }
+
+  card.innerHTML =
+    '<div class="event-dot ' + (isLaunch ? 'launch' : 'tx') + '"></div>' +
+    '<div class="event-info">' +
+      '<div class="event-type">' + (isLaunch ? 'TOKEN LAUNCH — ' + type : 'Transaction') + '</div>' +
+      '<div class="event-sig">' + (isLaunch && mint ? 'Mint: ' + mint : sigShort) + '</div>' +
+    '</div>' +
+    linksHtml +
+    '<div class="event-time">' + time + '</div>';
+
+  list.insertBefore(card, list.firstChild);
+
+  txCount++;
+  document.getElementById('txCount').textContent = txCount;
+  document.getElementById('lastActivity').textContent = time;
+
+  if (isLaunch) {
+    launchCount++;
+    document.getElementById('launchCount').textContent = launchCount;
+    showLaunchAlert(mint);
+    playAlertSound();
+
+    // Auto-open Padre.gg buy page
+    if (mint) {
+      window.open('https://trade.padre.gg/' + mint, '_blank');
+    }
+
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('TOKEN LAUNCH DETECTED!', {
+        body: 'Mint: ' + (mint || 'Unknown') + '\nType: ' + type,
+        requireInteraction: true
+      });
+    }
+  }
+}
+
+// ── Transaction Analysis ────────────────────────────────────────────
+async function fetchTransaction(sig) {
+  try {
+    const resp = await fetch(SOLANA_RPC, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0', id: 1, method: 'getTransaction',
+        params: [sig, { encoding: 'json', maxSupportedTransactionVersion: 0 }]
+      })
+    });
+    const data = await resp.json();
+    return data.result;
+  } catch (e) {
+    console.error('Error fetching tx:', e);
+    return null;
+  }
+}
+
+function classifyTransaction(tx) {
+  const result = { isLaunch: false, type: 'unknown', mint: null };
+  if (!tx) return result;
+
+  const meta = tx.meta || {};
+  const message = tx.transaction?.message || {};
+  const accountKeys = (message.accountKeys || []).map(k => typeof k === 'string' ? k : k.pubkey || '');
+  const instructions = message.instructions || [];
+  const innerInstructions = meta.innerInstructions || [];
+  const logMessages = meta.logMessages || [];
+
+  // Collect all program IDs
+  const programIds = new Set();
+  for (const ix of instructions) {
+    if (ix.programIdIndex != null && ix.programIdIndex < accountKeys.length) {
+      programIds.add(accountKeys[ix.programIdIndex]);
+    }
+  }
+  for (const inner of innerInstructions) {
+    for (const ix of (inner.instructions || [])) {
+      if (ix.programIdIndex != null && ix.programIdIndex < accountKeys.length) {
+        programIds.add(accountKeys[ix.programIdIndex]);
+      }
+    }
+  }
+
+  // Check pump.fun
+  if (programIds.has(PUMP_FUN)) {
+    result.isLaunch = true;
+    result.type = 'pump.fun launch';
+  }
+
+  // Check SPL Token InitializeMint
+  if (TOKEN_PROGRAMS.has(SPL_TOKEN) || TOKEN_PROGRAMS.has(TOKEN_2022)) {
+    for (const log of logMessages) {
+      if (log.includes('InitializeMint') || log.includes('initializeMint')) {
+        result.isLaunch = true;
+        result.type = 'SPL token creation';
+        break;
+      }
+    }
+  }
+
+  // Check Raydium
+  if (programIds.has(RAYDIUM_V4) || programIds.has(RAYDIUM_CPMM)) {
+    result.isLaunch = true;
+    result.type = 'Raydium pool creation';
+  }
+
+  // Fallback: check logs for creation keywords + known programs
+  if (!result.isLaunch) {
+    const hasTokenProgram = [...programIds].some(p => TOKEN_PROGRAMS.has(p) || LAUNCH_PROGRAMS.has(p));
+    if (hasTokenProgram) {
+      for (const log of logMessages) {
+        const lower = log.toLowerCase();
+        if (['create', 'initialize', 'mint', 'launch'].some(kw => lower.includes(kw))) {
+          result.isLaunch = true;
+          result.type = 'possible token launch';
+          break;
+        }
+      }
+    }
+  }
+
+  // Find mint address
+  if (result.isLaunch) {
+    const postBalances = meta.postTokenBalances || [];
+    const preBalances = meta.preTokenBalances || [];
+    const preMints = new Set(preBalances.map(b => b.mint));
+
+    // Look for new mints first
+    for (const bal of postBalances) {
+      if (bal.mint && !preMints.has(bal.mint) && bal.mint !== TARGET_WALLET) {
+        result.mint = bal.mint;
+        break;
+      }
+    }
+    // Fallback: any mint in post balances
+    if (!result.mint) {
+      for (const bal of postBalances) {
+        if (bal.mint && bal.mint !== TARGET_WALLET) {
+          result.mint = bal.mint;
+          break;
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
+async function processSignature(sig) {
+  if (seenSigs.has(sig)) return;
+  seenSigs.add(sig);
+  if (seenSigs.size > 5000) {
+    const arr = [...seenSigs];
+    arr.slice(0, 2500).forEach(s => seenSigs.delete(s));
+  }
+
+  const tx = await fetchTransaction(sig);
+  const info = classifyTransaction(tx);
+  addEvent(sig, info.isLaunch, info.type, info.mint);
+}
+
+// ── WebSocket Monitor ───────────────────────────────────────────────
+function connectWebSocket() {
+  updateStatus('connecting');
+  ws = new WebSocket(SOLANA_WS);
+
+  ws.onopen = () => {
+    updateStatus('connected');
+    ws.send(JSON.stringify({
+      jsonrpc: '2.0', id: 1, method: 'logsSubscribe',
+      params: [{ mentions: [TARGET_WALLET] }, { commitment: 'confirmed' }]
+    }));
+  };
+
+  ws.onmessage = async (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      if (!data.params) return;
+      const value = data.params.result?.value;
+      if (!value || value.err) return;
+      const sig = value.signature;
+      if (sig) await processSignature(sig);
+    } catch (e) {}
+  };
+
+  ws.onclose = () => {
+    updateStatus('disconnected');
+    setTimeout(connectWebSocket, 3000);
+  };
+
+  ws.onerror = () => {
+    updateStatus('disconnected');
+    ws.close();
+  };
+}
+
+// ── Polling Fallback ────────────────────────────────────────────────
+async function pollSignatures() {
+  try {
+    const resp = await fetch(SOLANA_RPC, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0', id: 1, method: 'getSignaturesForAddress',
+        params: [TARGET_WALLET, { limit: 5 }]
+      })
+    });
+    const data = await resp.json();
+    const sigs = data.result || [];
+    for (const s of sigs) {
+      if (s.signature && !seenSigs.has(s.signature)) {
+        await processSignature(s.signature);
+      }
+    }
+  } catch (e) {
+    console.error('Poll error:', e);
+  }
+}
+
+// ── Start ───────────────────────────────────────────────────────────
+connectWebSocket();
+setInterval(pollSignatures, POLL_INTERVAL);
+</script>
+</body>
+</html>
